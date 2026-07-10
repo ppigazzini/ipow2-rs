@@ -2395,6 +2395,9 @@ pub mod __detached_docs {
     }
 }
 
+#[cfg(kani)]
+mod kani_proofs;
+
 #[cfg(test)]
 mod tests {
     use super::*;

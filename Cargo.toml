@@ -11,6 +11,10 @@ description = "Efficient power-of-two abstraction in Rust"
 license = "Unlicense"
 include = ["/src", "Cargo.toml"]
 
+[lints.rust]
+# `cfg(kani)` is set by the Kani model checker (see src/kani_proofs.rs).
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)'] }
+
 [dev-dependencies]
 divan = "0.1.21"
 paste = "1.0.15"
