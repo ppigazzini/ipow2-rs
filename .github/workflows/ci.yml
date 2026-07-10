@@ -2,27 +2,138 @@ name: CI
 
 on:
   push:
-    branches: [master]
+    branches: [master, github_ci]
   pull_request:
 
+# Least-privilege by default; jobs opt into more only when they need it.
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
+  # Cross-platform test matrix: x86_64 and arm64 for each of Linux, Windows and
+  # macOS. Runs the suite in both debug and release so the crate's intentional
+  # debug-panic / release-wrap behavior split is actually exercised.
   test:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-
+    name: test / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest # Linux x86_64
+          - ubuntu-24.04-arm # Linux arm64
+          - windows-latest # Windows x86_64
+          - windows-11-arm # Windows arm64
+          - macos-latest # macOS arm64 (Apple silicon)
+          - macos-15-intel # macOS x86_64 (Intel)
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88 # master
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - run: cargo test --all-features
+      - run: cargo test --release --all-features
+      - run: cargo test --doc --all-features
+      - run: cargo build --release
+
+  # Formatting, lints and documentation warnings. Host-independent, so a single
+  # runner suffices.
+  lint:
+    name: fmt + clippy + doc
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88 # master
+        with:
+          toolchain: stable
           components: rustfmt, clippy
-
-      - uses: Swatinem/rust-cache@v2
-
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
       - run: cargo fmt --check
       - run: cargo clippy --all-targets --all-features -- -D warnings
-      - run: cargo test --all-features
-      - run: cargo build --release
+      - run: cargo doc --all-features --no-deps
+        env:
+          RUSTDOCFLAGS: -D warnings
+
+  # Detect undefined behavior in the unsafe unchecked-shift internals. Scoped to
+  # the in-crate unit tests, whose inputs are small enough for Miri's
+  # interpreter (the exhaustive integration suite is far too large to run here).
+  miri:
+    name: miri
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88 # master
+        with:
+          toolchain: nightly
+          components: miri
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - run: cargo miri test --lib --all-features
+        env:
+          MIRIFLAGS: -Zmiri-strict-provenance
+
+  # Line-coverage regression guard. The private trait-forwarder methods are
+  # shadowed by inherent methods and thus structurally unreachable, so the gate
+  # is set well below 100%.
+  coverage:
+    name: coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88 # master
+        with:
+          toolchain: stable
+          components: llvm-tools-preview
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - uses: taiki-e/install-action@c7eb1735f09259a5035e8e5d44b1406b1cddc0fb # v2.83.0
+        with:
+          tool: cargo-llvm-cov
+      - run: cargo llvm-cov --all-features --tests --summary-only --fail-under-lines 90
+
+  # Supply-chain: advisories, licenses, bans and source policy (see deny.toml).
+  deny:
+    name: cargo-deny
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: EmbarkStudios/cargo-deny-action@bb137d7af7e4fb67e5f82a49c4fce4fad40782fe # v2.0.20
+        with:
+          command: check
+
+  # Catch accidental public-API breakage against the published release.
+  semver:
+    name: semver-checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: obi1kenobi/cargo-semver-checks-action@6b69fcf40e9b5fb17adeb57e4b6ecd020649a239 # v2.9
+
+  # Static analysis of the workflows themselves (template injection, credential
+  # leakage, over-broad permissions, impostor commits, ...).
+  zizmor:
+    name: zizmor
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: zizmorcore/zizmor-action@192e21d79ab29983730a13d1382995c2307fbcaa # v0.5.7
+        with:
+          advanced-security: false
+          annotations: true
+          min-severity: medium
