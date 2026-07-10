@@ -4,9 +4,9 @@
 
 # ipow2 - Efficient power-of-two abstraction
 
-This crate provides two complementary types for representing powers of two - 
-`Pow2<T>` for bounded exponents and `UnboundedPow2` for unbounded exponents - 
-together with a comprehensive suite of optimized arithmetic operations (division, modulo, rounding, 
+This crate provides two complementary types for representing powers of two -
+`Pow2<T>` for bounded exponents and `UnboundedPow2` for unbounded exponents -
+together with a comprehensive suite of optimized arithmetic operations (division, modulo, rounding,
 and alignment).
 
 Aside from improved performance, such abstraction provides valuable guarantees.
@@ -95,7 +95,7 @@ power-of-two types, if their behavior is meaningfully different.
 `unbounded_*` can be used if the `UnboundedPow2` can have exponents outside the
 range supported by the left hand side operand.
 
-```rust 
+```rust
 use ipow2::{Pow2, Pow2OutOfRange, UnboundedPow2};
 fn main() {
     let some_high_pow2 = UnboundedPow2::YOBI;

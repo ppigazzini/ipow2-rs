@@ -606,8 +606,8 @@ impl Pow2<u8> {
     pub const VAL_128: Self = Self { exponent: 7,   _marker: marker::PhantomData };
 }
 
-#[rustfmt::skip] 
-impl Pow2<u16> { 
+#[rustfmt::skip]
+impl Pow2<u16> {
     pub const VAL_1  : Self = Self { exponent: 0,   _marker: marker::PhantomData };
     pub const VAL_2  : Self = Self { exponent: 1,   _marker: marker::PhantomData };
     pub const VAL_4  : Self = Self { exponent: 2,   _marker: marker::PhantomData };
@@ -618,12 +618,12 @@ impl Pow2<u16> {
     pub const VAL_128: Self = Self { exponent: 7,   _marker: marker::PhantomData };
     pub const VAL_256: Self = Self { exponent: 8,   _marker: marker::PhantomData };
     pub const VAL_512: Self = Self { exponent: 9,   _marker: marker::PhantomData };
- 
+
     pub const KIBI   : Self = Self { exponent: 10,  _marker: marker::PhantomData };
 }
 
-#[rustfmt::skip] 
-impl Pow2<u32> { 
+#[rustfmt::skip]
+impl Pow2<u32> {
     pub const VAL_1  : Self = Self { exponent: 0,   _marker: marker::PhantomData };
     pub const VAL_2  : Self = Self { exponent: 1,   _marker: marker::PhantomData };
     pub const VAL_4  : Self = Self { exponent: 2,   _marker: marker::PhantomData };
@@ -634,14 +634,14 @@ impl Pow2<u32> {
     pub const VAL_128: Self = Self { exponent: 7,   _marker: marker::PhantomData };
     pub const VAL_256: Self = Self { exponent: 8,   _marker: marker::PhantomData };
     pub const VAL_512: Self = Self { exponent: 9,   _marker: marker::PhantomData };
- 
+
     pub const KIBI   : Self = Self { exponent: 10,  _marker: marker::PhantomData };
     pub const MEBI   : Self = Self { exponent: 20,  _marker: marker::PhantomData };
     pub const GIBI   : Self = Self { exponent: 30,  _marker: marker::PhantomData };
 }
 
-#[rustfmt::skip] 
-impl Pow2<u64> { 
+#[rustfmt::skip]
+impl Pow2<u64> {
     pub const VAL_1  : Self = Self { exponent: 0,   _marker: marker::PhantomData };
     pub const VAL_2  : Self = Self { exponent: 1,   _marker: marker::PhantomData };
     pub const VAL_4  : Self = Self { exponent: 2,   _marker: marker::PhantomData };
@@ -652,7 +652,7 @@ impl Pow2<u64> {
     pub const VAL_128: Self = Self { exponent: 7,   _marker: marker::PhantomData };
     pub const VAL_256: Self = Self { exponent: 8,   _marker: marker::PhantomData };
     pub const VAL_512: Self = Self { exponent: 9,   _marker: marker::PhantomData };
- 
+
     pub const KIBI   : Self = Self { exponent: 10,  _marker: marker::PhantomData };
     pub const MEBI   : Self = Self { exponent: 20,  _marker: marker::PhantomData };
     pub const GIBI   : Self = Self { exponent: 30,  _marker: marker::PhantomData };
@@ -699,7 +699,7 @@ impl Pow2<usize> {
     pub const VAL_128: Self = Self { exponent: 7,   _marker: marker::PhantomData };
     pub const VAL_256: Self = Self { exponent: 8,   _marker: marker::PhantomData };
     pub const VAL_512: Self = Self { exponent: 9,   _marker: marker::PhantomData };
- 
+
     pub const KIBI   : Self = Self { exponent: 10,  _marker: marker::PhantomData };
 }
 
@@ -716,7 +716,7 @@ impl Pow2<usize> {
     pub const VAL_128: Self = Self { exponent: 7,   _marker: marker::PhantomData };
     pub const VAL_256: Self = Self { exponent: 8,   _marker: marker::PhantomData };
     pub const VAL_512: Self = Self { exponent: 9,   _marker: marker::PhantomData };
- 
+
     pub const KIBI   : Self = Self { exponent: 10,  _marker: marker::PhantomData };
     pub const MEBI   : Self = Self { exponent: 20,  _marker: marker::PhantomData };
     pub const GIBI   : Self = Self { exponent: 30,  _marker: marker::PhantomData };
@@ -735,7 +735,7 @@ impl Pow2<usize> {
     pub const VAL_128: Self = Self { exponent: 7,   _marker: marker::PhantomData };
     pub const VAL_256: Self = Self { exponent: 8,   _marker: marker::PhantomData };
     pub const VAL_512: Self = Self { exponent: 9,   _marker: marker::PhantomData };
- 
+
     pub const KIBI   : Self = Self { exponent: 10,  _marker: marker::PhantomData };
     pub const MEBI   : Self = Self { exponent: 20,  _marker: marker::PhantomData };
     pub const GIBI   : Self = Self { exponent: 30,  _marker: marker::PhantomData };

@@ -3,8 +3,8 @@
 For code documentation `cargo doc` is recommended. The crate-level documentation
 provides some usage examples.
 
-This document provides information on some additional resources, 
-like assembly listings, `llvm-mca` analysis, and benchmarks. 
+This document provides information on some additional resources,
+like assembly listings, `llvm-mca` analysis, and benchmarks.
 
 ## Assembly analysis
 
@@ -60,7 +60,7 @@ These benchmarks are defined in [this file](../benches/public.rs) and the runner
 
 Due to the difficulty of microbenchmarking such tiny functions the benchmarks focus
 on vectorizable workloads. Each benchmark case is a mapping of a 1024 input array
-into a 1024 output array. 
+into a 1024 output array.
 
 These cases are further subdivided by two criteria:
 
