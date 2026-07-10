@@ -1558,6 +1558,10 @@ where
         } else if T::IS_SIGNED && self == T::MIN && rhs.exponent as u32 == T::BITS {
             // result would be -0.5, so round to -1
             T::MINUS_ONE
+        } else if T::IS_UNSIGNED && self >= (T::MAX >> 1) + T::ONE && rhs.exponent as u32 == T::BITS
+        {
+            // result would be >= 0.5, so round away from zero to 1
+            T::ONE
         } else {
             T::ZERO
         }

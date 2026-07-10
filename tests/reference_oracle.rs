@@ -85,16 +85,9 @@ macro_rules! unsigned_suite {
             assert_eq!(unbounded_rem(x, unb), rem as T);
             assert_eq!(unbounded_div_floor(x, unb), floor as T);
             assert_eq!(unbounded_div_ceil(x, unb), ceil as T);
-            // NOTE (characterization): for out-of-range exponents `unbounded_div_round`
-            // always yields 0 for unsigned inputs. At `x == 2^(BITS-1)`, `e == BITS`
-            // the true value is exactly 0.5, which "round half away from zero" would
-            // send to 1 (and which `unbounded_round_to_multiple` rounds up, returning
-            // `None` on overflow). This asymmetry is a known crate inconsistency; the
-            // test pins current behavior rather than the mathematically-rounded value.
-            let exp_div_round = if safe { round as T } else { 0 };
             assert_eq!(
                 unbounded_div_round(x, unb),
-                exp_div_round,
+                round as T,
                 "unbounded_div_round x={x} e={e}"
             );
             assert_eq!(unbounded_is_multiple_of(x, unb), is_mult);
