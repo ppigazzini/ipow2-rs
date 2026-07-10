@@ -1,0 +1,52 @@
+# Pre-commit hooks for the ipow2 repo (Rust + the Python doc scripts).
+#
+# Set up once:   uv run pre-commit install
+# Run manually:  uv run pre-commit run --all-files
+#
+# Generated assembly / llvm-mca / benchmark docs are excluded from the
+# whitespace hooks since they are produced verbatim by the scripts.
+exclude: '^docs/(asm|mca|bench)-.*\.md$'
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-shebang-scripts-are-executable
+      - id: mixed-line-ending
+        args: [--fix=lf]
+        exclude: '\.bat$' # keep CRLF for the Windows batch helper
+
+  # Python: lint + format the doc scripts (rules configured in pyproject.toml).
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.21
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+
+  # Checks that need the local toolchains (Rust, and the project's uv env for ty).
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: cargo fmt
+        entry: cargo fmt --
+        language: system
+        types: [rust]
+        pass_filenames: false
+      - id: cargo-clippy
+        name: cargo clippy
+        entry: cargo clippy --all-targets --all-features -- -D warnings
+        language: system
+        types: [rust]
+        pass_filenames: false
+      - id: ty
+        name: ty check scripts
+        entry: uv run ty check scripts/
+        language: system
+        types: [python]
+        pass_filenames: false
