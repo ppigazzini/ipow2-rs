@@ -5135,10 +5135,10 @@ mod tests {
             let hi = ceil_to_multiple(a, b);
             assert!(lo <= a, "floor {lo} > {a}");
             assert!(hi >= a, "ceil {hi} < {a}");
+            let gap = hi - lo;
             assert!(
-                hi - lo == 0 || hi - lo == 16,
-                "gap between floor and ceil should be 0 or 16, got {} for a={a}",
-                hi - lo
+                gap == 0 || gap == 16,
+                "gap between floor and ceil should be 0 or 16, got {gap} for a={a}"
             );
         }
     }
