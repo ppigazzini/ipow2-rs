@@ -1,4 +1,4 @@
-use std::ops::{Add, BitAnd, Not, Shl, Shr, Sub};
+use core::ops::{Add, BitAnd, Not, Shl, Shr, Sub};
 
 mod seals {
     pub trait SealedInt {}

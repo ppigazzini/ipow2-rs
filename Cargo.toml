@@ -2,6 +2,10 @@
 name = "ipow2"
 version = "0.2.0"
 edition = "2024"
+# Floor is set by the inherent `unchecked_shl`/`unchecked_shr` integer methods
+# used internally, which are stable since 1.93 (edition 2024 needs >= 1.85 and
+# `cast_signed`/`cast_unsigned` >= 1.87, both lower).
+rust-version = "1.93"
 repository = "https://github.com/Sopel97/ipow2-rs"
 description = "Efficient power-of-two abstraction in Rust"
 license = "Unlicense"

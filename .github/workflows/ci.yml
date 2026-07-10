@@ -55,12 +55,15 @@ jobs:
         with:
           toolchain: stable
           components: rustfmt, clippy
+          targets: thumbv7em-none-eabi
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
       - run: cargo fmt --check
       - run: cargo clippy --all-targets --all-features -- -D warnings
       - run: cargo doc --all-features --no-deps
         env:
           RUSTDOCFLAGS: -D warnings
+      # Prove the library is `no_std` by building it for a bare-metal target.
+      - run: cargo check --lib --target thumbv7em-none-eabi
 
   # Lint, format-check and type-check the doc-generation scripts, using the
   # locked environment from pyproject.toml (ruff select = ALL, plus ty).

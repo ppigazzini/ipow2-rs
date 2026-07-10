@@ -200,9 +200,16 @@
 //! this crate uses an unconventional documentation pattern. See [`__detached_docs`]
 //! for documentations on specific trait implementations.
 
-use std::error::Error;
-use std::ops::{Div, DivAssign, Mul, MulAssign, Rem, RemAssign};
-use std::{cmp, marker};
+#![no_std]
+
+// The library is `no_std`; only the test module (and the doctests, which are
+// compiled as independent std crates) reach for `std`.
+#[cfg(test)]
+extern crate std;
+
+use core::error::Error;
+use core::ops::{Div, DivAssign, Mul, MulAssign, Rem, RemAssign};
+use core::{cmp, marker};
 
 #[macro_use]
 mod private;
@@ -232,8 +239,8 @@ const _: () = assert!(align_of::<UnboundedPow2>() == align_of::<u8>());
 pub struct NotPow2;
 
 impl Error for NotPow2 {}
-impl std::fmt::Display for NotPow2 {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for NotPow2 {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         write!(f, "Not a power of two")
     }
 }
@@ -243,8 +250,8 @@ impl std::fmt::Display for NotPow2 {
 pub struct Pow2OutOfRange;
 
 impl Error for Pow2OutOfRange {}
-impl std::fmt::Display for Pow2OutOfRange {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for Pow2OutOfRange {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         write!(f, "Out of range")
     }
 }
@@ -773,8 +780,8 @@ pub enum Pow2TryFromIntError {
 }
 
 impl Error for Pow2TryFromIntError {}
-impl std::fmt::Display for Pow2TryFromIntError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for Pow2TryFromIntError {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match self {
             Pow2TryFromIntError::Pow2OutOfRange => {
                 write!(f, "Out of range")
@@ -2391,8 +2398,9 @@ pub mod __detached_docs {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fmt::Write;
+    use core::fmt::Write;
     use std::hash::{DefaultHasher, Hash, Hasher};
+    use std::string::String;
 
     #[test]
     fn unb_pow2_constructible_from_any_u8_exponent() {
