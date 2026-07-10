@@ -98,9 +98,9 @@ jobs:
         env:
           MIRIFLAGS: -Zmiri-strict-provenance
 
-  # Line-coverage regression guard. The private trait-forwarder methods are
-  # shadowed by inherent methods and thus structurally unreachable, so the gate
-  # is set well below 100%.
+  # Coverage regression guard. Every function is exercised (100%) and line
+  # coverage is effectively complete; the only uncovered regions are cold
+  # assert/debug_assert panic arms that fire solely on failure.
   coverage:
     name: coverage
     runs-on: ubuntu-latest
@@ -116,7 +116,7 @@ jobs:
       - uses: taiki-e/install-action@c7eb1735f09259a5035e8e5d44b1406b1cddc0fb # v2.83.0
         with:
           tool: cargo-llvm-cov
-      - run: cargo llvm-cov --all-features --tests --summary-only --fail-under-lines 90
+      - run: cargo llvm-cov --all-features --tests --summary-only --fail-under-functions 100 --fail-under-lines 99
 
   # Supply-chain: advisories, licenses, bans and source policy (see deny.toml).
   deny:
