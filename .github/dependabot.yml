@@ -10,6 +10,16 @@ updates:
     commit-message:
       prefix: "build(deps)"
 
+  # Keep the Python doc-script tooling (ruff, ty, py-cpuinfo) current.
+  - package-ecosystem: uv
+    directory: "/"
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "build(deps)"
+
   # Keep the pinned action SHAs current; grouped into a single PR.
   - package-ecosystem: github-actions
     directory: "/"
