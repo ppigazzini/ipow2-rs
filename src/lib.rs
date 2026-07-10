@@ -2641,6 +2641,8 @@ mod tests {
         assert_eq!(UnboundedPow2::from_exponent(127).as_u128(), 1 << 127);
     }
 
+    // Relies on the `debug_assert!` in `as_*`, which is compiled out in release.
+    #[cfg(debug_assertions)]
     #[test]
     fn unb_pow2_as_int_not_fitting() {
         assert!(std::panic::catch_unwind(|| UnboundedPow2::from_exponent(7).as_i8()).is_err());
