@@ -1323,7 +1323,9 @@ where
     #[inline(always)]
     fn rem_floor(self, rhs: UnboundedPow2) -> Self::Output {
         debug_assert!(rhs.is_safe::<T::Unsigned>());
-        self - floor_to_multiple(self, rhs)
+        // The floor remainder of a power of two is exactly the low `exponent`
+        // bits (`x & (2^e - 1)`), non-negative for signed inputs by construction.
+        self & T::mask(rhs.exponent as u32)
     }
 }
 
@@ -1338,7 +1340,10 @@ where
     /// See [docs](__detached_docs::Pow2::RemFloor)
     #[inline(always)]
     fn rem_floor(self, rhs: Pow2<T>) -> Self::Output {
-        self - floor_to_multiple(self, rhs)
+        // The floor remainder of a power of two is exactly the low `exponent`
+        // bits (`x & (2^e - 1)`), non-negative for signed inputs by construction.
+        // SAFETY: Pow2<T> guarantees a valid shift
+        self & unsafe { Self::unchecked_mask(rhs.exponent as u32) }
     }
 }
 
@@ -1581,7 +1586,9 @@ where
     #[inline(always)]
     fn is_multiple_of(self, rhs: UnboundedPow2) -> Self::Output {
         debug_assert!(rhs.is_safe::<T::Unsigned>());
-        self.trailing_zeros() >= rhs.exponent as u32
+        // `x` is a multiple of `2^e` iff its low `e` bits are clear. Mask-based
+        // (AND + test) rather than `trailing_zeros`, which does not vectorize.
+        (self & T::mask(rhs.exponent as u32)).is_zero()
     }
 }
 
@@ -1596,7 +1603,10 @@ where
     /// See [docs](__detached_docs::Pow2::IsMultipleOf)
     #[inline(always)]
     fn is_multiple_of(self, rhs: Pow2<T>) -> Self::Output {
-        self.trailing_zeros() >= rhs.exponent as u32
+        // `x` is a multiple of `2^e` iff its low `e` bits are clear. Mask-based
+        // (AND + test) rather than `trailing_zeros`, which does not vectorize.
+        // SAFETY: Pow2<T> guarantees a valid shift
+        (self & unsafe { Self::unchecked_mask(rhs.exponent as u32) }).is_zero()
     }
 }
 
@@ -1629,7 +1639,10 @@ where
     #[inline(always)]
     fn floor_to_multiple(self, rhs: UnboundedPow2) -> Self::Output {
         debug_assert!(rhs.is_safe::<T::Unsigned>());
-        self >> rhs.exponent << rhs.exponent
+        // Clear the low `exponent` bits (`x & !(2^e - 1)`). Mask-based rather
+        // than `>> e << e` so the mask is shared with the other operations and
+        // the code vectorizes (no variable shift).
+        self & !T::mask(rhs.exponent as u32)
     }
 }
 
@@ -1644,11 +1657,11 @@ where
     /// See [docs](__detached_docs::Pow2::FloorToMultiple)
     #[inline(always)]
     fn floor_to_multiple(self, rhs: Pow2<T>) -> Self::Output {
+        // Clear the low `exponent` bits (`x & !(2^e - 1)`). Mask-based rather
+        // than `>> e << e` so the mask is shared with the other operations and
+        // the code vectorizes (no variable shift).
         // SAFETY: Pow2<T> guarantees a valid shift
-        unsafe {
-            self.unchecked_shr(rhs.exponent as u32)
-                .unchecked_shl(rhs.exponent as u32)
-        }
+        self & !unsafe { Self::unchecked_mask(rhs.exponent as u32) }
     }
 }
 
