@@ -1,0 +1,37 @@
+# Configuration for cargo-deny (https://embarkstudios.github.io/cargo-deny/).
+# Checked in CI via the `deny` job.
+
+[advisories]
+version = 2
+# RustSec advisory database defaults are used. Yanked crates are rejected.
+yanked = "deny"
+ignore = [
+    # `paste` is unmaintained but is a dev-only dependency (benchmark helper
+    # macros) with no runtime exposure and no drop-in safe replacement. It never
+    # ships in the published crate, whose dependency graph is empty.
+    "RUSTSEC-2024-0436",
+]
+
+[licenses]
+version = 2
+# The crate itself is Unlicense; the remaining entries cover the (dev-)
+# dependency graph as reported by `cargo metadata`.
+allow = [
+    "Unlicense",
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "Unicode-3.0",
+]
+confidence-threshold = 0.8
+
+[bans]
+# The published crate has no runtime dependencies; duplicates can only creep in
+# through dev-dependencies, so surface them as warnings rather than errors.
+multiple-versions = "warn"
+wildcards = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
