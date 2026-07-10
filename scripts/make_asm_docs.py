@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
+"""Generate per-target assembly and llvm-mca documentation for the ipow2 crate."""
+
+import os
 import platform
 import re
 import subprocess
-from pathlib import Path
 import sys
-import os
-
+from pathlib import Path
 
 ASM_DIR = Path("asm")
 ASM_DIR.mkdir(exist_ok=True)
@@ -31,29 +32,29 @@ CPUS_X86_64: list[str] = ["znver4", "raptorlake"]
 CPUS_AARCH64: list[str] = ["apple-m1"]
 
 
-def make_mca_filepath(cpu: str) -> str:
-    return f"./docs/mca-{cpu}.md"
+def make_mca_filepath(cpu: str) -> Path:
+    """Return the output path for the llvm-mca document of ``cpu``."""
+    return Path(f"./docs/mca-{cpu}.md")
 
 
-def make_asm_filepath(target: str, cpu: str) -> str:
-    return f"./docs/asm-{target}-{cpu}.md"
+def make_asm_filepath(target: str, cpu: str) -> Path:
+    """Return the output path for the assembly document of ``target``/``cpu``."""
+    return Path(f"./docs/asm-{target}-{cpu}.md")
 
 
 def get_host_os() -> str:
+    """Return ``"windows"`` or ``"linux"`` for the host, or raise otherwise."""
     sysname = platform.system().lower()
     if "windows" in sysname:
         return "windows"
     if "linux" in sysname:
         return "linux"
-    raise RuntimeError(f"Unsupported OS: {sysname}")
+    msg = f"Unsupported OS: {sysname}"
+    raise RuntimeError(msg)
 
 
 def get_target_triples(host_os: str) -> list[str]:
-    """
-    Returns the most reasonable Rust target triples for:
-    - x86_64 native
-    - aarch64 native (if applicable ecosystem exists)
-    """
+    """Return the native x86_64 and aarch64 Rust target triples for the host OS."""
     if host_os == "windows":
         return [
             WINDOWS_X86_64_TARGET,
@@ -66,10 +67,12 @@ def get_target_triples(host_os: str) -> list[str]:
             LINUX_AARCH64_TARGET,
         ]
 
-    raise RuntimeError(f"No targets defined for OS: {host_os}")
+    msg = f"No targets defined for OS: {host_os}"
+    raise RuntimeError(msg)
 
 
 def get_installed_targets() -> set[str]:
+    """Return the set of Rust targets installed for the nightly toolchain."""
     result = subprocess.run(
         ["rustup", "+nightly", "target", "list", "--installed"],
         capture_output=True,
@@ -83,6 +86,7 @@ def check_targets(
     installed: set[str],
     targets: list[str],
 ) -> tuple[list[str], list[str]]:
+    """Split ``targets`` into (available, missing) against ``installed``."""
     available: list[str] = []
     missing: list[str] = []
 
@@ -96,6 +100,7 @@ def check_targets(
 
 
 def strip_trailing_empty_lines(lines: list[str]) -> None:
+    """Remove trailing blank lines from ``lines`` in place."""
     while lines and not lines[-1].strip():
         lines.pop()
 
@@ -103,6 +108,7 @@ def strip_trailing_empty_lines(lines: list[str]) -> None:
 def extract_llvm_mca_legends(
     stdout: str,
 ) -> tuple[str, str, str]:
+    """Split llvm-mca output into (body, instruction legend, resources legend)."""
     remaining_lines: list[str] = []
     instruction_legend_lines: list[str] = []
     resources_legend_lines: list[str] = []
@@ -122,8 +128,10 @@ def extract_llvm_mca_legends(
                 lines_output_ptr = remaining_lines
 
             # Do not duplicate empty lines
-            if not curr_line_is_empty or len(lines_output_ptr) == 0 or (
-                lines_output_ptr[-1] != "" and not lines_output_ptr[-1].isspace()
+            if (
+                not curr_line_is_empty
+                or len(lines_output_ptr) == 0
+                or (lines_output_ptr[-1] != "" and not lines_output_ptr[-1].isspace())
             ):
                 lines_output_ptr.append(line)
 
@@ -139,29 +147,41 @@ def extract_llvm_mca_legends(
 
 
 def run_llvm_mca(asm: str, arch: str, cpu: str) -> str:
-    # NOTE: We can only reliably do a single iteration because we can't control register allocations
-    #       and it may lead to loop-carried dependencies that we don't want.
+    """Run llvm-mca on ``asm`` for ``arch``/``cpu`` and return its stdout."""
+    # NOTE: We can only reliably run a single iteration: we cannot control
+    #       register allocation, which can introduce loop-carried dependencies.
     p = subprocess.run(
-        ["llvm-mca", "-x86-asm-syntax=intel", f"--march={arch}", f"-mcpu={cpu}", "-iterations=1"],
+        [
+            "llvm-mca",
+            "-x86-asm-syntax=intel",
+            f"--march={arch}",
+            f"-mcpu={cpu}",
+            "-iterations=1",
+        ],
         input=asm,
         text=True,
         capture_output=True,
+        check=False,
     )
 
     if p.returncode != 0:
         print("Command failed!")
         print("STDOUT:\n", p.stdout)
         print("STDERR:\n", p.stderr)
-        raise RuntimeError("llvm-mca call failed")
+        msg = "llvm-mca call failed"
+        raise RuntimeError(msg)
 
     return p.stdout
 
 
-def make_rustflags_env(cpu: str | None = None) -> dict:
+def make_rustflags_env(cpu: str | None = None) -> dict[str, str]:
+    """Return a copy of the environment with RUSTFLAGS set for asm extraction."""
     env = os.environ.copy()
 
     if cpu:
-        env["RUSTFLAGS"] = f"-C opt-level=3 -Z merge-functions=disabled -C target-cpu={cpu}"
+        env["RUSTFLAGS"] = (
+            f"-C opt-level=3 -Z merge-functions=disabled -C target-cpu={cpu}"
+        )
     else:
         env["RUSTFLAGS"] = "-C opt-level=3 -Z merge-functions=disabled"
 
@@ -169,11 +189,12 @@ def make_rustflags_env(cpu: str | None = None) -> dict:
 
 
 def cargo_asm_list() -> str:
+    """Return the raw ``cargo asm`` listing of all benchmark functions."""
     env = make_rustflags_env()
 
     cargo_asm_list_cmd = [
         "cargo",
-        "+nightly", # needed for disabling merge-functions
+        "+nightly",  # needed for disabling merge-functions
         "asm",
         "--bench",
         "asm",
@@ -183,17 +204,20 @@ def cargo_asm_list() -> str:
         text=True,
         capture_output=True,
         env=env,
+        check=False,
     ).stdout
 
 
-def cargo_asm(number: str, name: str, target: str, cpu: str | None = None) -> str:
+def cargo_asm(number: str, target: str, cpu: str | None = None) -> str:
+    """Return the disassembly of benchmark function ``number`` for a target/cpu."""
     env = make_rustflags_env(cpu)
 
     cargo_asm_cmd = [
         "cargo",
-        "+nightly", # needed for disabling merge-functions
+        "+nightly",  # needed for disabling merge-functions
         "asm",
-        "--target", target,
+        "--target",
+        target,
         "--simplify",
         "--intel",
         "--bench",
@@ -206,18 +230,21 @@ def cargo_asm(number: str, name: str, target: str, cpu: str | None = None) -> st
         text=True,
         capture_output=True,
         env=env,
+        check=False,
     )
 
     if p.returncode != 0:
         print("Command failed!")
         print("STDOUT:\n", p.stdout)
         print("STDERR:\n", p.stderr)
-        raise RuntimeError("cargo asm call failed")
+        msg = "cargo asm call failed"
+        raise RuntimeError(msg)
 
     return p.stdout
 
 
 def list_functions() -> list[tuple[str, str]]:
+    """Return the (number, name) pairs of benchmark functions worth dumping."""
     output = cargo_asm_list()
 
     functions: list[tuple[str, str]] = []
@@ -240,21 +267,15 @@ def list_functions() -> list[tuple[str, str]]:
     return functions
 
 
-def get_function_asm(number: str, name: str, target: str, cpu: str | None = None) -> str:
-    return cargo_asm(number, name, target, cpu)
-
-
-def get_llvm_mca(asm: str, arch: str, cpu: str) -> str:
-    return run_llvm_mca(asm, arch, cpu)
-
-
 def strip_preamble(lines: list[str]) -> list[str]:
+    """Drop a leading label line (``name:``) from an assembly listing."""
     if lines[0].endswith(":"):
         lines = lines[1:]
     return lines
 
 
 def strip_trailing_ret(lines: list[str]) -> list[str]:
+    """Drop trailing blank lines and a final ``ret`` instruction."""
     while lines and not lines[-1].strip():
         lines.pop()
 
@@ -265,6 +286,7 @@ def strip_trailing_ret(lines: list[str]) -> list[str]:
 
 
 def sanitize_asm(asm: str) -> str:
+    """Strip the label preamble and trailing ``ret`` from an assembly listing."""
     lines = asm.splitlines()
 
     lines = strip_preamble(lines)
@@ -274,17 +296,17 @@ def sanitize_asm(asm: str) -> str:
 
 
 def natural_key(s: str) -> list[int | str]:
-    return [
-        int(part) if part.isdigit() else part
-        for part in re.split(r"(\d+)", s)
-    ]
+    """Return a sort key that orders embedded numbers numerically."""
+    return [int(part) if part.isdigit() else part for part in re.split(r"(\d+)", s)]
 
 
 def sort_functions(functions: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    """Return ``functions`` sorted by name using a natural (numeric-aware) order."""
     return sorted(functions, key=lambda x: natural_key(x[1]))
 
 
 def choose_x86_64_target(targets: list[str]) -> str | None:
+    """Return the first x86_64 target in ``targets``, or ``None``."""
     for target in targets:
         if "x86_64" in target:
             return target
@@ -292,6 +314,7 @@ def choose_x86_64_target(targets: list[str]) -> str | None:
 
 
 def choose_aarch64_target(targets: list[str]) -> str | None:
+    """Return the first aarch64 target in ``targets``, or ``None``."""
     for target in targets:
         if "aarch64" in target:
             return target
@@ -299,20 +322,22 @@ def choose_aarch64_target(targets: list[str]) -> str | None:
 
 
 def transpose_asms(asms: dict[str, str]) -> dict[str, list[str]]:
-    by_asm = dict()
+    """Group function names by identical assembly, coalescing duplicates."""
+    by_asm: dict[str, list[str]] = {}
     for fn, asm in asms.items():
         if asm in by_asm:
             by_asm[asm].append(fn)
         else:
             by_asm[asm] = [fn]
 
-    for asm, fns in by_asm.items():
+    for fns in by_asm.values():
         fns.sort(key=natural_key)
 
     return by_asm
 
 
 def format_fns(fns: list[str]) -> str:
+    """Format a list of function names as a comma-separated code span list."""
     return ", ".join(f"`{fn}`" for fn in fns)
 
 
@@ -322,32 +347,32 @@ def produce_docs(
     cpus_x86_64: list[str],
     cpus_aarch64: list[str],
 ) -> None:
+    """Extract assembly and llvm-mca output and write the per-target documents."""
     functions = list_functions()
     functions = sort_functions(functions)
 
     print(f"Found {len(functions)} functions")
 
-    jobs: list[tuple[str, str, list[str], str]] = [
-        # march    target         cpus         asm filepath
-        ("x86-64",  target_x86_64,  cpus_x86_64),
+    jobs: list[tuple[str, str, list[str]]] = [
+        # march,    target,         cpus
+        ("x86-64", target_x86_64, cpus_x86_64),
         ("aarch64", target_aarch64, cpus_aarch64),
     ]
 
-    for (march, target, cpus) in jobs:
+    for march, target, cpus in jobs:
         asms: dict[str, str] = {}
 
         # Generic asm for no specific cpu on this target
-        for (number, fn) in functions:
+        for number, fn in functions:
             print(f"Extracting {march} asm for {fn}")
 
-            asm = get_function_asm(number, fn, target)
-            asm = sanitize_asm(asm)
+            asm = sanitize_asm(cargo_asm(number, target))
 
             asms[fn] = asm
 
         asm_filepath = make_asm_filepath(target, "generic")
         print(f"Writing {march} asm to {asm_filepath}")
-        with open(asm_filepath, "w", encoding="utf-8") as outfile:
+        with asm_filepath.open("w", encoding="utf-8") as outfile:
             by_asm = transpose_asms(asms)
             for asm, fns in by_asm.items():
                 outfile.write(f"## {format_fns(fns)}\n")
@@ -355,11 +380,10 @@ def produce_docs(
 
         for cpu in cpus:
             # Asm for this specific cpu
-            for (number, fn) in functions:
+            for number, fn in functions:
                 print(f"Extracting {march} asm for {fn}")
 
-                asm = get_function_asm(number, fn, target, cpu)
-                asm = sanitize_asm(asm)
+                asm = sanitize_asm(cargo_asm(number, target, cpu))
 
                 asms[fn] = asm
 
@@ -367,13 +391,13 @@ def produce_docs(
 
             asm_filepath = make_asm_filepath(target, cpu)
             print(f"Writing {march} asm to {asm_filepath}")
-            with open(asm_filepath, "w", encoding="utf-8") as outfile:
+            with asm_filepath.open("w", encoding="utf-8") as outfile:
                 by_asm = transpose_asms(asms)
                 for asm, fns in by_asm.items():
                     outfile.write(f"## {format_fns(fns)}\n")
                     outfile.write(f"```asm\n{asm}\n```\n")
 
-            with open(make_mca_filepath(cpu), "w", encoding="utf-8") as outfile:
+            with make_mca_filepath(cpu).open("w", encoding="utf-8") as outfile:
                 instructions_legend: str = ""
                 resources_legend: str = ""
 
@@ -382,9 +406,11 @@ def produce_docs(
                 for asm, fns in by_asm.items():
                     print(f"Extracting mca for {fns} on {cpu}")
 
-                    mca = get_llvm_mca(asm, march, cpu)
+                    mca = run_llvm_mca(asm, march, cpu)
 
-                    mca, instructions_legend, resources_legend = extract_llvm_mca_legends(mca)
+                    mca, instructions_legend, resources_legend = (
+                        extract_llvm_mca_legends(mca)
+                    )
 
                     mcas[mca] = fns
 
@@ -402,6 +428,7 @@ def produce_docs(
 
 
 def main() -> None:
+    """Detect the host, verify targets, and generate all asm/mca documents."""
     host_os = get_host_os()
     print(f"Detected OS: {host_os}")
 

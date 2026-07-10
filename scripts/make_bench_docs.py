@@ -1,26 +1,35 @@
-import subprocess
-import cpuinfo
-import os
+#!/usr/bin/env python3
+"""Run the `public` benchmark suite and write the results into the docs folder."""
 
+import os
+import subprocess
+from pathlib import Path
+
+import cpuinfo
 
 BENCH_NAME = "public"
 
-DEFAULT_BENCH_FILEPATH = "./docs/bench-default.md"
-NATIVE_BENCH_FILEPATH = "./docs/bench-native.md"
+DEFAULT_BENCH_FILEPATH = Path("./docs/bench-default.md")
+NATIVE_BENCH_FILEPATH = Path("./docs/bench-native.md")
 
 
 def get_cpu_name() -> str:
-    return cpuinfo.get_cpu_info()['brand_raw']
+    """Return the marketing name of the host CPU."""
+    return cpuinfo.get_cpu_info()["brand_raw"]
 
 
-def run_bench(name: str, target_cpu: str | None):
+def run_bench(name: str, target_cpu: str | None) -> str:
+    """Run the named cargo benchmark and return its captured result table.
+
+    When ``target_cpu`` is given it is forwarded to rustc via ``-C target-cpu``.
+    """
     env = os.environ.copy()
     if target_cpu:
         env["RUSTFLAGS"] = f"-C opt-level=3 -C target-cpu={target_cpu}"
     else:
         env["RUSTFLAGS"] = "-C opt-level=3"
 
-    output = []
+    output: list[str] = []
     do_capture = False
 
     with subprocess.Popen(
@@ -32,13 +41,15 @@ def run_bench(name: str, target_cpu: str | None):
         env=env,
         encoding="utf-8",
     ) as p:
-        assert p.stdout is not None
+        if p.stdout is None:
+            msg = "failed to capture cargo bench output"
+            raise RuntimeError(msg)
 
         for line in p.stdout:
             print(line, end="", flush=True)
 
-            # Omit compilation and info. First line is something like the following
-            # public       fastest       │ slowest       │ median        │ mean          │ samples │ iters
+            # Omit compilation and info. The first captured line looks like:
+            # public  fastest │ slowest │ median │ mean │ samples │ iters
             if line.startswith(name):
                 do_capture = True
 
@@ -48,21 +59,23 @@ def run_bench(name: str, target_cpu: str | None):
         ret = p.wait()
 
     if ret != 0:
-        raise RuntimeError("cargo bench failed")
+        msg = "cargo bench failed"
+        raise RuntimeError(msg)
 
     return "".join(output)
 
 
 def main() -> None:
+    """Generate the default- and native-target benchmark documents."""
     bench_default = run_bench(BENCH_NAME, None)
     bench_native = run_bench(BENCH_NAME, "native")
 
-    with open(DEFAULT_BENCH_FILEPATH, "w", encoding="utf-8") as outfile:
+    with DEFAULT_BENCH_FILEPATH.open("w", encoding="utf-8") as outfile:
         outfile.write(f"# `{BENCH_NAME}` bench with default target\n")
         outfile.write(f"```\n{bench_default}\n```\n")
 
-    with open(NATIVE_BENCH_FILEPATH, "w", encoding="utf-8") as outfile:
-        cpu = cpuinfo.get_cpu_info()['brand_raw']
+    with NATIVE_BENCH_FILEPATH.open("w", encoding="utf-8") as outfile:
+        cpu = get_cpu_name()
         outfile.write(f"# `{BENCH_NAME}` bench with native target ({cpu})\n")
         outfile.write(f"```\n{bench_native}\n```\n")
 
