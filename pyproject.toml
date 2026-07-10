@@ -1,0 +1,43 @@
+[project]
+name = "ipow2-scripts"
+version = "0.0.0"
+description = "Developer scripts that regenerate the ipow2 assembly, llvm-mca and benchmark docs."
+requires-python = ">=3.14"
+dependencies = [
+    "py-cpuinfo>=9.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15",
+    "ty>=0.0.1",
+]
+
+[tool.uv]
+# The scripts are run in place, not installed as a package.
+package = false
+
+[tool.ruff]
+target-version = "py314"
+line-length = 88
+src = ["scripts"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    # Owned by the formatter; enabling them fights `ruff format`.
+    "COM812", # missing trailing comma
+    "ISC001", # single-line implicit string concatenation
+    # Conflicting halves of the pydocstyle pairs (keep D211 / D212).
+    "D203", # one-blank-line-before-class
+    "D213", # multi-line-summary-second-line
+    # Intentional for a developer CLI / build script (not a library).
+    "T201",   # `print` is the script's user-facing output
+    "S603",   # subprocess is only ever called with hard-coded, trusted args
+    "S607",   # tools (cargo/rustup/llvm-mca) are resolved from PATH by design
+    "INP001", # `scripts/` is a script directory, not an importable package
+    "TRY003", # long messages live at the raise site; too strict for scripts
+]
+
+[tool.ty.environment]
+python-version = "3.14"

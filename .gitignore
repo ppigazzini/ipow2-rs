@@ -1,2 +1,7 @@
 /target
 /.idea
+
+# Python tooling (uv / ruff / ty)
+/.venv
+__pycache__/
+.ruff_cache/
